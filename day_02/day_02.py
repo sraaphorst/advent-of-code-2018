@@ -20,7 +20,7 @@ def calculate_package_checksum(packages):
         letters = {}
         for letter in package:
             letters.setdefault(letter, 0)
-            letters[letter] = letters[letter] + 1
+            letters[letter] += 1
 
         twocount += 1 if 2 in letters.values() else 0
         threecount += 1 if 3 in letters.values() else 0

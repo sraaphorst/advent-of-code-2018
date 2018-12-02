@@ -32,7 +32,7 @@ def frequency_generator(freqs):
         if n == len(freqs):
             n = 0
         yield freqs[n]
-        n = n + 1
+        n += 1
 
 
 def find_repeated_frequency(freqs):
@@ -58,7 +58,7 @@ def find_repeated_frequency(freqs):
     freq = 0
     while freq not in s:
         s.add(freq)
-        freq = freq + next(gen)
+        freq += next(gen)
     return freq
 
 
