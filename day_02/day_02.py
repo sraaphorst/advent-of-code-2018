@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# day_02.py
+# By Sebastian Raaphorst, 2018.
+
 
 import aocd
 

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
+# day_01.py
+# By Sebastian Raaphorst, 2018.
+
 
 import aocd
+
 
 def frequency(freqs):
     """
