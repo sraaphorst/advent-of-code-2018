@@ -161,14 +161,15 @@ def find_nonintersecting_regions(fabric_cuts):
 
 
 if __name__ == '__main__':
+    day = 3
     session = aocd.get_cookie()
-    data = aocd.get_data(session=session, year=2018, day=3)
+    data = aocd.get_data(session=session, year=2018, day=day)
     fabric_cuts = list(map(FabricCut, data.split('\n')))
 
     a1 = total_intersection_size(fabric_cuts)
     print("a1 = %r" % a1)
-    aocd.submit1(a1, year=2018, day=3, session=session, reopen=False)
+    aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
     a2 = find_nonintersecting_regions(fabric_cuts)
     print("a2 = %r" % a2)
-    aocd.submit2(a2, year=2018, day=3, session=session, reopen=False)
+    aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)

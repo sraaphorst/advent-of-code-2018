@@ -67,14 +67,15 @@ def find_repeated_frequency(freqs):
 
 
 if __name__ == '__main__':
+    day = 1
     session = aocd.get_cookie()
-    data = aocd.get_data(session=session, year=2018, day=1)
+    data = aocd.get_data(session=session, year=2018, day=day)
     frequencies = list(map(int, data.split('\n')))
 
     a1 = frequency(frequencies)
     print("a1 = %r" % a1)
-    aocd.submit1(a1, year=2018, day=1, session=session, reopen=False)
+    aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
     a2 = find_repeated_frequency(frequencies)
     print("a2 = %r" % a2)
-    aocd.submit2(a2, year=2018, day=1, session=session, reopen=False)
+    aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
