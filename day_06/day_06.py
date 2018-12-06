@@ -17,7 +17,19 @@ def bounding_box_pt(coords):
     :param coords: the coordinates of the points
     :return: the index of the point with the largest finite area
 
+    # This shows how to consider the last element, we need to add one to the point count.
+    # We demonstrate this through the explicit case and then a couple of shuffles.
     >>> bounding_box_pt([(1, 1), (6, 1), (3, 8), (4, 3), (5, 5), (9, 8)])
+    17
+    >>> bounding_box_pt([(1, 1), (6, 1), (3, 8), (4, 3), (9, 8), (5, 5)])
+    17
+    >>> A = [(1, 1), (6, 1), (3, 8), (4, 3), (9, 8), (5, 5)]
+    >>> from random import shuffle
+    >>> shuffle(A)
+    >>> bounding_box_pt(A)
+    17
+    >>> shuffle(A)
+    >>> bounding_box_pt(A)
     17
     """
     # The number of points, and split the coordinates into x-values and y-values.
@@ -63,7 +75,8 @@ def bounding_box_pt(coords):
 
     # Count the number of cells "won" by each point.
     # If a point lands on the outer border, it falls in an infinite area and is not a viable candidate.
-    # I'm not sure why we need numps + 1 here. It seems like this counts the -1 areas. Why are they important?
+    # It seems like we need the + 1 here to consider the last point for its area.
+    # See the example above in bounding_box_pt doctests.
     pcounts = [0] * (numps + 1)
     for (x, y) in [(x, y) for x in range(xmax - xmin + 1) for y in range(ymax - ymin + 1)]:
         p = pts[x][y]
