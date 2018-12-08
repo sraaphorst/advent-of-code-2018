@@ -107,6 +107,9 @@ def region_within(coords, dist):
     16
     """
     # Remove all the x and y distances from dist to see how big the bounding box should be.
+    # There is plenty of room for improvement here, especially since in my example data, ybound before taking the max
+    # with 0 is negative, which means only inner points from a distance of that much from the outermost point is a
+    # candidate. I'm just being slightly intellectually lazy here due to time constaints.
     xmin, xmax = min(x for x, _ in coords), max(x for x, _ in coords)
     ymin, ymax = min(y for _, y in coords), max(y for _, y in coords)
     xbound = max(0, dist - sum(x for x, _ in coords))
