@@ -95,6 +95,39 @@ def bounding_box_pt(coords):
         return maxdist
 
 
+def region_within(coords, dist):
+    """
+    Determine the number of points that are within a summed Manhattan distance of dist from all the points in
+    coords.
+    :param coords: the coordinates of the points under consideration
+    :param dist: the maximum distance allowed
+    :return: the number of points
+
+    >>> region_within([(1, 1), (6, 1), (3, 8), (4, 3), (5, 5), (9, 8)], 32)
+    16
+    """
+    # Remove all the x and y distances from dist to see how big the bounding box should be.
+    xmin, xmax = min(x for x, _ in coords), max(x for x, _ in coords)
+    ymin, ymax = min(y for _, y in coords), max(y for _, y in coords)
+    xbound = max(0, dist - sum(x for x, _ in coords))
+    ybound = max(0, dist - sum(y for _, y in coords))
+
+    # Adjust the points.
+    adjcoords = [(x + xbound, y + ybound) for x, y in coords]
+
+    numpoints = 0
+    for x in range(0, xmax + xbound):
+        for y in range(0, ymax + ybound):
+            currdist = 0
+            for cx, cy in adjcoords:
+                currdist += abs(x - cx) + abs(y - cy)
+                if currdist >= dist:
+                    break
+            if currdist < dist:
+                numpoints += 1
+    return numpoints
+
+
 if __name__ == '__main__':
     day = 6
     session = aocd.get_cookie()
@@ -105,6 +138,6 @@ if __name__ == '__main__':
     print("a1 = %r" % a1)
     aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
-    a2 = None
+    a2 = region_within(coords, 10000)
     print("a2 = %r" % a2)
-    #aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
+    aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
