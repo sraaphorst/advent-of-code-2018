@@ -155,10 +155,10 @@ if __name__ == '__main__':
 
     a1 = find_best_prospect(schedule)
     a1prod = a1[0] * a1[1]
-    print("a1 = %r" % a1prod)
+    print('a1 = %r' % a1prod)
     aocd.submit1(a1prod, year=2018, day=day, session=session, reopen=False)
 
     a2 = find_most_predictable_guard(schedule)
     a2prod = a2[0] * a2[1]
-    print("a2 = %r" % a2prod)
+    print('a2 = %r' % a2prod)
     aocd.submit2(a2prod, year=2018, day=day, session=session, reopen=False)

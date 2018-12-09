@@ -56,9 +56,9 @@ if __name__ == '__main__':
     package_list = data.split('\n')
 
     a1 = calculate_package_checksum(package_list)
-    print("a1 = %r" % a1)
+    print('a1 = %r' % a1)
     aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
     a2 = find_close_packages(package_list)
-    print("a2 = %r" % a2)
+    print('a2 = %r' % a2)
     aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)

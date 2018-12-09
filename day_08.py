@@ -63,9 +63,9 @@ if __name__ == '__main__':
 
     a1 = serial_code(master_data_list, func=Node.metadata_serial)
 
-    print("a1 = %r" % a1)
+    print('a1 = %r' % a1)
     aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
     a2 = serial_code(master_data_list, func=Node.child_metadata_serial)
-    print("a2 = %r" % a2)
+    print('a2 = %r' % a2)
     aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)

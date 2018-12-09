@@ -150,9 +150,9 @@ if __name__ == '__main__':
     step_dicts = create_step_dict(extract_step_data(data))
 
     a1 = step_order(step_dicts)
-    print("a1 = %r" % a1)
+    print('a1 = %r' % a1)
     aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
     a2 = parallel_worker_time(step_dicts, 5, 60)
-    print("a2 = %r" % a2)
+    print('a2 = %r' % a2)
     aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)

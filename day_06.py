@@ -138,9 +138,9 @@ if __name__ == '__main__':
     coords = [tuple(map(int, x.split(', '))) for x in data.split('\n')]
 
     a1 = bounding_box_pt(coords)
-    print("a1 = %r" % a1)
+    print('a1 = %r' % a1)
     aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
     a2 = region_within(coords, 10000)
-    print("a2 = %r" % a2)
+    print('a2 = %r' % a2)
     aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
