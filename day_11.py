@@ -68,7 +68,6 @@ class SummedAreaTable:
             - self._table[x + height - 1][y-1]
 
 
-
 def calculate_cell_power_level(x, y, serial):
     """
     Calculate the convoluted power level of a cell based on the formula provided.
@@ -124,16 +123,15 @@ def find_highest_powered_square(sa_table, n=3):
                 for y in range(sa_table.cols - n + 1)])
 
 
-# def find_highest_powered_of_all_squares(table):
-#     """
-#     Find the highest power level of all squares.
-#     :param table: the summed-area table
-#     :return: the upper left coordinates and size of each cell
-#     >>> find_highest_powered_of_all_squares(create_summed_area_table(create_power_level_matrix(18)))
-#     ((113, (90, 269)), 16)
-#     """
-#     return max([(find_highest_powered_square(table, i), i) for i in range(1, 301)])
-
+def find_highest_powered_of_all_squares(sa_table):
+    """
+    Find the highest power level of all squares.
+    :param sa_table: the summed-area table
+    :return: the upper left coordinates and size of each cell
+    >>> find_highest_powered_of_all_squares(SummedAreaTable(create_power_level_table(18)))
+    ((113, (90, 269)), 16)
+    """
+    return max([(find_highest_powered_square(sa_table, i), i) for i in range(1, 301)])
 
 
 if __name__ == '__main__':
@@ -141,20 +139,13 @@ if __name__ == '__main__':
     session = aocd.get_cookie()
     data = aocd.get_data(session=session, year=2018, day=day)
     serial_data = int(data)
+    satable = SummedAreaTable(create_power_level_table(serial_data))
 
-    A = create_power_level_matrix(10)
-    for i in range(10):
-        C = A[:10]
-        print(C)
-    print('\n\n')
-    B = create_summed_area_table(A)
-    for i in range(10):
-        print(B[:10])
+    a1 = '{},{}'.format(*find_highest_powered_square(satable)[1])
+    print('a1 = {}'.format(a1))
+    aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
-    #a1 = '{},{}'.format(*find_highest_powered_square(cell_powers)[1])
-    #print('a1 = {}'.format(a1))
-    #aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
-
-    #a2 = None
-    #print('a2 = %r' % a2)
-    #aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
+    a2result = find_highest_powered_of_all_squares(satable)
+    a2 = '{},{},{}'.format(a2result[0][1][0], a2result[0][1][1], a2result[1])
+    print('a2 = {}'.format(a2))
+    aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
