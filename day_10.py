@@ -78,9 +78,7 @@ def draw_message(points):
         dist_next = distance_at_t(points, t+1)
 
         # Change directions?
-        if delta_t > 0 and dist_prev < dist:
-            delta_t = -int(delta_t / 2)
-        elif delta_t < 0 and dist_next < dist:
+        if (delta_t > 0 and dist_prev < dist) or (delta_t < 0 and dist_next < dist):
             delta_t = -int(delta_t / 2)
 
         # Inefficient way to check if we are at the local minimum.
