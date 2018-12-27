@@ -113,6 +113,15 @@ class Game:
         # print("Initial:")
         # self.print_board(critters)
 
+        # Get the critters adjacent to a tile.
+        def adjacent_enemies(x, y, race):
+            adj = []
+            for delta in [(-1, 0), (0, -1), (0, 1), (1, 0)]:
+                newx, newy = x + delta[0], y + delta[1]
+                if (newx, newy) in critters and critters[(newx, newy)].race != race:
+                    adj.append((newx, newy))
+            return adj
+
         # Now play the game until all of the critters on one side are dead.
         num_rounds = 0
         while True:
@@ -136,67 +145,72 @@ class Game:
                 # Clear out the enemy to attack:
                 enemy_to_attack = None
 
-                # To do this, keep track of visited tiles. Start with the current critter's tile as a path of
-                # length 0 and then expand outward. Stop expanding a path when it is adjacent to a critter of the
-                # opposite race type.
-                covered_tiles = {(critter.x, critter.y)}
-                possible_paths = [[(critter.x, critter.y)]]
+                # We have two cases to consider:
+                # 1. If any enemies are adjacent to us, pick the the weakest one.
+                # 2. Otherwise, pick the enemy closest to us and move towards them, breaking ties with reading order.
+                # If there are immediately adjacent enemies, simply attack the weakest.
 
-                while len(possible_paths) > 0:
-                    # Check if there are any enemies in a possible path. If so, stop.
-                    adjacent_enemies = [(critters[path[-1]], path) for path in possible_paths if path[-1] in critters
-                                        and critters[path[-1]].race != critter.race]
+                # Case 1:
+                adj_enemies = sorted(adjacent_enemies(critter.x, critter.y, critter.race),
+                                     key=lambda x: critters[x].hit_points)
+                if len(adj_enemies) > 0:
+                    enemy_to_attack = critters[adj_enemies[0]]
 
-                    # If there is an enemy, move towards it (if possible, i.e. not adjacent to it already).
-                    if len(adjacent_enemies) > 0:
-                        # Pick the weakest enemy to attack, otherwise selecting in reading order,
-                        enemy_to_attack, path = sorted(adjacent_enemies,
-                                                       key=lambda c: (c[0].hit_points, c[0].x, c[0].y))[0]
+                # Case 2:
+                else:
+                    # To do this, keep track of visited tiles. Start with the current critter's tile as a path of
+                    # length 0 and then expand outward. Stop expanding a path when it is adjacent to a critter of the
+                    # opposite race type.
+                    covered_tiles = {(critter.x, critter.y)}
+                    possible_paths = [[(critter.x, critter.y)]]
 
-                        # In order to move, the path must have length at least three:
-                        # The first entry is the present location of the critter;
-                        # The second position is an empty position to which it moves; and
-                        # The last position is an enemy.
-                        if len(path) >= 3:
-                            critters[path[1]] = critter
-                            oldx, oldy = critter.x, critter.y
-                            del critters[(oldx, oldy)]
-                            critter.x, critter.y = path[1]
+                    # Extend the paths, if possible.
+                    while len(possible_paths) > 0:
+                        new_possible_paths = []
+                        for path in possible_paths:
+                            for delta in [(0, -1), (-1, 0), (0, 1), (1, 0)]:
+                                # Form the new point with which to extend the path.
+                                newx, newy = path[-1][0] + delta[0], path[-1][1] + delta[1]
 
-                        # Now we have either moved, or were adjacent to an enemy.
-                        break
+                                # We cannot move to it if:
+                                # 1. It has been marked as used; or
+                                # 2. It cannot be occupied (i.e. it is out of bounds or not floor); or
+                                # 3. An ally occupies it.
+                                if (newx, newy) in covered_tiles or not can_be_occupied(newx, newy) or \
+                                        ((newx, newy) in critters and critters[(newx, newy)].race == critter.race):
+                                    covered_tiles.add((newx, newy))
+                                    continue
 
-                    # Otherwise, try all the paths adjacent to the existing paths that can be extended.
-                    # We don't use a list comprehension for this as the logic is quite complex.
-                    new_possible_paths = []
-                    for path in possible_paths:
-                        for delta in [(0, -1), (-1, 0), (0, 1), (1, 0)]:
-                            # Form the new point with which to extend the path.
-                            newx, newy = path[-1][0] + delta[0], path[-1][1] + delta[1]
-
-                            # We cannot move to it if:
-                            # 1. It has been marked as used; or
-                            # 2. It is cannot be occupied (i.e. it out of bounds or not floor); or
-                            # 3. An ally occupies it.
-                            if (newx, newy) in covered_tiles or not can_be_occupied(newx, newy) or \
-                                    ((newx, newy) in critters and critters[(newx, newy)].race == critter.race):
+                                # Otherwise, extend the path.
                                 covered_tiles.add((newx, newy))
-                                continue
+                                new_possible_paths.append(path + [(newx, newy)])
 
-                            # Otherwise, extend the path.
-                            covered_tiles.add((newx, newy))
-                            new_possible_paths.append(path + [(newx, newy)])
+                        possible_paths = sorted(new_possible_paths)
 
-                    possible_paths = sorted(new_possible_paths)
+                        # Check if there is a path that can take us to an enemy.
+                        # print("NEW POSSIBLE:")
+                        # for p in possible_paths:
+                        #     print("{}: {}".format(p, adjacent_enemies(p[-1][0], p[-1][1], critter.race)))
+                        enemy_paths = [p for p in possible_paths
+                                       if len(adjacent_enemies(p[-1][0], p[-1][1], critter.race)) > 0]
+                        # Pick the reading order path and move one square.
+                        if len(enemy_paths) > 0:
+                            newx, newy = enemy_paths[0][1]
+                            oldx, oldy = critter.x, critter.y
+                            # print("Moving {} {} to {} {}".format(oldx, oldy, newx, newy))
+                            del critters[(oldx, oldy)]
+                            critters[(newx, newy)] = critter
+                            critter.x = newx
+                            critter.y = newy
 
-                # If we have a marked enemy to attack, attack it.
-                if enemy_to_attack is not None and \
-                        abs(critter.x - enemy_to_attack.x) + abs(critter.y - enemy_to_attack.y) == 1:
-                    # print("Enemy {} is attacking enemy {}".format(critter, enemy_to_attack))
-                    # Hurt the enemy.
+                            # Special case: we are now in range of an enemy.
+                            if len(enemy_paths) == 3:
+                                enemy_to_attack = critters[(enemy_paths[2][0], enemy_paths[2][1])]
+                            break
+
+                if enemy_to_attack is not None:
                     enemy_to_attack.hit_points -= critter.attack_power
                     if enemy_to_attack.hit_points <= 0:
-                        # print("Dead: {}".format(enemy_to_attack))
                         del critters[(enemy_to_attack.x, enemy_to_attack.y)]
 
             if all_units_acted:
@@ -204,8 +218,8 @@ class Game:
             else:
                 break
 
-            # print("*** AFTER ROUND {} ***".format(num_rounds))
-            # self.print_board(critters)
+            print("*** AFTER ROUND {} ***".format(num_rounds))
+            self.print_board(critters)
 
         # print(num_rounds, sum([c.hit_points for c in critters.values()]))
         # self.print_board(critters)
@@ -217,17 +231,13 @@ class Game:
 if __name__ == '__main__':
     day = 15
     session = aocd.get_cookie()
+    data = aocd.get_data(session=session, year=2018, day=day)
 
-    data = open('day_15_3.dat').read()
-    g = Game(data)
-    a = g.play()
-    print(a)
-#    data = aocd.get_data(session=session, year=2018, day=day)
-
-    a1 = None
-    print('a1 = %r' % a1)
-#    aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
+    Game(open('day_15_2.dat').read()).play()
+    #a1 = Game(data).play()
+    #print('a1 = %r' % a1)
+    #aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
     a2 = None
     print('a2 = %r' % a2)
-#    aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
+    #aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
