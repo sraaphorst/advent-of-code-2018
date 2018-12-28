@@ -132,6 +132,7 @@ class Game:
             # Now, for each non-dead critter, we must find the shortest path to its nearest enemy, if one exists.
             all_units_acted = True
             for critter_id in critter_order:
+                # print("Moving critter {}".format(critter_id))
                 # If the critter was killed, we skip.
                 critter = list_or_none([c for c in critters.values() if c.id == critter_id])
                 if critter is None:
@@ -154,6 +155,7 @@ class Game:
                 adj_enemies = sorted(adjacent_enemies(critter.x, critter.y, critter.race),
                                      key=lambda x: critters[x].hit_points)
                 if len(adj_enemies) > 0:
+                    # print("Critter {} will attack".format(critter))
                     enemy_to_attack = critters[adj_enemies[0]]
 
                 # Case 2:
@@ -176,7 +178,7 @@ class Game:
                                 # 1. It has been marked as used; or
                                 # 2. It cannot be occupied (i.e. it is out of bounds or not floor); or
                                 # 3. An ally occupies it.
-                                if (newx, newy) in covered_tiles or not can_be_occupied(newx, newy) or \
+                                if (newx, newy) in covered_tiles or (not can_be_occupied(newx, newy)) or \
                                         ((newx, newy) in critters and critters[(newx, newy)].race == critter.race):
                                     covered_tiles.add((newx, newy))
                                     continue
@@ -187,28 +189,31 @@ class Game:
 
                         possible_paths = sorted(new_possible_paths)
 
-                        # Check if there is a path that can take us to an enemy.
-                        # print("NEW POSSIBLE:")
-                        # for p in possible_paths:
-                        #     print("{}: {}".format(p, adjacent_enemies(p[-1][0], p[-1][1], critter.race)))
+                        # Do any of our possible paths take us to an enemy?
                         enemy_paths = [p for p in possible_paths
                                        if len(adjacent_enemies(p[-1][0], p[-1][1], critter.race)) > 0]
-                        # Pick the reading order path and move one square.
+
+                        # If so, pick the reading order path and move one square.
                         if len(enemy_paths) > 0:
-                            newx, newy = enemy_paths[0][1]
+                            enemy_path = enemy_paths[0]
+                            # print("{} moves on path: {}".format(critter, enemy_path))
+                            newx, newy = enemy_path[1]
                             oldx, oldy = critter.x, critter.y
-                            # print("Moving {} {} to {} {}".format(oldx, oldy, newx, newy))
                             del critters[(oldx, oldy)]
                             critters[(newx, newy)] = critter
                             critter.x = newx
                             critter.y = newy
 
-                            # Special case: we are now in range of an enemy.
-                            if len(enemy_paths) == 3:
-                                enemy_to_attack = critters[(enemy_paths[2][0], enemy_paths[2][1])]
+                            # If we are now in range of an enemy, attack the weakest.
+                            adj_enemies = sorted(adjacent_enemies(critter.x, critter.y, critter.race),
+                                                 key=lambda x: critters[x].hit_points)
+                            if len(adj_enemies) > 0:
+                                # print("Critter {} will attack".format(critter))
+                                enemy_to_attack = critters[adj_enemies[0]]
                             break
 
                 if enemy_to_attack is not None:
+                    # print("{} is attacking {}".format(critter, enemy_to_attack))
                     enemy_to_attack.hit_points -= critter.attack_power
                     if enemy_to_attack.hit_points <= 0:
                         del critters[(enemy_to_attack.x, enemy_to_attack.y)]
@@ -218,8 +223,8 @@ class Game:
             else:
                 break
 
-            print("*** AFTER ROUND {} ***".format(num_rounds))
-            self.print_board(critters)
+            # print("*** AFTER ROUND {} ***".format(num_rounds))
+            # self.print_board(critters)
 
         # print(num_rounds, sum([c.hit_points for c in critters.values()]))
         # self.print_board(critters)
@@ -233,9 +238,9 @@ if __name__ == '__main__':
     session = aocd.get_cookie()
     data = aocd.get_data(session=session, year=2018, day=day)
 
-    Game(open('day_15_2.dat').read()).play()
-    #a1 = Game(data).play()
-    #print('a1 = %r' % a1)
+    #Game(open('day_15_2.dat').read()).play()
+    a1 = Game(data).play()
+    print('a1 = %r' % a1)
     #aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
     a2 = None
