@@ -31,9 +31,12 @@ class Critter:
         self.id = Critter.id
         Critter.id += 1
 
+    # def __str__(self):
+    #     return '{}(id={}, x={}, y={}, attack={}, hp={})'.format('G' if self.race == Race.GOBLIN else 'E', self.id,
+    #                                                  self.x, self.y, self.attack_power, self.hit_points)
+
     def __str__(self):
-        return '{}(id={}, x={}, y={}, hp={})'.format('G' if self.race == Race.GOBLIN else 'E', self.id,
-                                                     self.x, self.y, self.hit_points)
+        return '{}({})'.format('G' if self.race == Race.GOBLIN else 'E', self.hit_points)
 
 
 class Game:
@@ -64,20 +67,19 @@ class Game:
 
     def print_board(self, critters):
         # Print the playing board and the critters.
-        print('rows={}, cols={}'.format(len(self._board), len(self._board[0])))
         for row in range(len(self._board)):
+            baddies = []
             for col in range(len(self._board[row])):
                 if (row, col) in critters:
                     sys.stdout.write('E' if critters[(row, col)].race == Race.ELF else 'G')
                 else:
                     sys.stdout.write('#' if self._board[row][col] == Terrain.WALL else '.')
+                    baddies = sorted([c for c in critters.values() if c.x == row], key=lambda c: c.y)
+            sys.stdout.write('  ' + ', '.join([str(c) for c in baddies]))
             sys.stdout.write('\n')
         sys.stdout.write('\n')
-        for c in critters.values():
-            print(c)
-        sys.stdout.write('\n\n')
 
-    def play(self, critters=None):
+    def play(self, critters=None, debug=False):
         """
         Simulate the game, making a copy of the objects so at the leave the base confirguration immutable.
         :return: the sum of the hit points of the survivors multiplied by the number of rounds, and the number
@@ -97,6 +99,10 @@ class Game:
         28944
         >>> Game(open('day_15_7.dat').read()).play()[0]
         18740
+        >>> Game(open('day_15_8.dat').read()).play()[0]
+        18468
+        >>> Game(open('day_15_9.dat').read()).play()[0]
+        10234
         """
         # Make copies of the data that should be mutable so that we can manipulate it.
         # This comprises the critter dictionary.
@@ -109,13 +115,19 @@ class Game:
             return 0 <= x <= len(self._board) and 0 <= y <= len(self._board[0]) and self._board[x][y] == Terrain.FLOOR
 
         def list_or_none(L):
+            """
+            If a list is a singleton, return the element, and otherwise None.
+            """
             return None if len(L) == 0 else L[0]
 
-        # print("Initial:")
-        # self.print_board(critters)
+        if debug:
+            print("Initial:")
+            self.print_board(critters)
 
-        # Get the critters adjacent to a tile.
         def adjacent_enemies(x, y, race):
+            """
+            Return the positions of enemies to the specified race  that are adjacent to tile (x,y).
+            """
             adj = []
             for delta in [(-1, 0), (0, -1), (0, 1), (1, 0)]:
                 newx, newy = x + delta[0], y + delta[1]
@@ -133,7 +145,6 @@ class Game:
             # Now, for each non-dead critter, we must find the shortest path to its nearest enemy, if one exists.
             all_units_acted = True
             for critter_id in critter_order:
-                # print("Moving critter {}".format(critter_id))
                 # If the critter was killed, we skip.
                 critter = list_or_none([c for c in critters.values() if c.id == critter_id])
                 if critter is None:
@@ -224,15 +235,15 @@ class Game:
             else:
                 break
 
-            # print("*** AFTER ROUND {} ***".format(num_rounds))
-            # self.print_board(critters)
+            if debug:
+                print("*** AFTER ROUND {} ***".format(num_rounds))
+                self.print_board(critters)
 
-        # print(num_rounds, sum([c.hit_points for c in critters.values()]))
-        # self.print_board(critters)
         # At this point, sum up the remaining HP of all critters (since one race will be dead), and multiply by the
         # number of rounds.
-        # print("*** AFTER ROUND {} ***".format(num_rounds))
-        # self.print_board(critters)
+        if debug:
+            print("*** AFTER ROUND {} ***".format(num_rounds))
+            self.print_board(critters)
         num_elves = len([c for c in critters.values() if c.race == Race.ELF])
         # print("{} * {}".format(num_rounds, sum([c.hit_points for c in critters.values()])))
         return num_rounds * sum([c.hit_points for c in critters.values()]), num_elves
@@ -253,13 +264,18 @@ class Game:
         6474
         >>> Game(open('day_15_7.dat').read()).determine_elf_strength()
         1140
+        >>> Game(open('day_15_8.dat').read()).determine_elf_strength()
+        120
+        >>> Game(open('day_15_9.dat').read()).determine_elf_strength()
+        943
         """
-        attack_power = 4
+        attack_power = 3
 
         critters = deepcopy(self._critters)
         elves = [c for c in critters.values() if c.race == Race.ELF]
 
         while True:
+            attack_power += 1
             for e in elves:
                 e.attack_power = attack_power
 
@@ -268,19 +284,17 @@ class Game:
             if pop == len(elves):
                 return score
 
-            attack_power += 1
-
 
 if __name__ == '__main__':
     day = 15
     session = aocd.get_cookie()
     data = aocd.get_data(session=session, year=2018, day=day)
 
-    #Game(open('day_15_2.dat').read()).play()
-    a1 = Game(data).play()[0]
-    print('a1 = %r' % a1)
+    Game(open('day_15_9.dat').read()).play(debug=True)
+    #a1 = Game(data).play()[0]
+    #print('a1 = %r' % a1)
     #aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
-    a2 = Game(data).determine_elf_strength()
-    print('a2 = %r' % a2)
+    #a2 = Game(data).determine_elf_strength()
+    #print('a2 = %r' % a2)
     #aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
