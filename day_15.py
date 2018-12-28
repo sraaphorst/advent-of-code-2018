@@ -19,6 +19,13 @@ class Race(Enum):
     GOBLIN = 2
 
 
+def list_or_none(L):
+    """
+    If a list is a singleton, return the element, and otherwise None.
+    """
+    return None if len(L) == 0 else L[0]
+
+
 class Critter:
     id = 0
 
@@ -40,6 +47,8 @@ class Critter:
 
 
 class Game:
+    delta = [(0, -1), (-1, 0), (1, 0), (0, 1)]
+
     def __init__(self, data):
         """
         Read the dame setup from the provided data, and we create the immutable data that will be used to play.
@@ -108,29 +117,27 @@ class Game:
         # This comprises the critter dictionary.
         critters = deepcopy(self._critters) if critters is None else deepcopy(critters)
 
-        def can_be_occupied(x, y):
+        def can_be_occupied(tile):
             """
             Determine if position (x, y) can be occupied, (x, y) is in bounds and a floor tile.
             """
-            return 0 <= x <= len(self._board) and 0 <= y <= len(self._board[0]) and self._board[x][y] == Terrain.FLOOR
-
-        def list_or_none(L):
-            """
-            If a list is a singleton, return the element, and otherwise None.
-            """
-            return None if len(L) == 0 else L[0]
+            x, y = tile
+            return 0 <= x <= len(self._board) and \
+                   0 <= y <= len(self._board[0]) and \
+                   self._board[x][y] == Terrain.FLOOR and \
+                   (x, y) not in critters
 
         if debug:
             print("Initial:")
             self.print_board(critters)
 
-        def adjacent_enemies(x, y, race):
+        def adjacent_enemies(tile, race):
             """
-            Return the positions of enemies to the specified race  that are adjacent to tile (x,y).
+            Return the positions of enemies to the specified race that are adjacent to tile (x,y).
             """
             adj = []
-            for delta in [(-1, 0), (0, -1), (0, 1), (1, 0)]:
-                newx, newy = x + delta[0], y + delta[1]
+            for dx, dy in Game.delta:
+                newx, newy = tile[0] + dx, tile[1] + dy
                 if (newx, newy) in critters and critters[(newx, newy)].race != race:
                     adj.append((newx, newy))
             return adj
@@ -164,7 +171,7 @@ class Game:
                 # If there are immediately adjacent enemies, simply attack the weakest.
 
                 # Case 1:
-                adj_enemies = sorted(adjacent_enemies(critter.x, critter.y, critter.race),
+                adj_enemies = sorted(adjacent_enemies((critter.x, critter.y), critter.race),
                                      key=lambda x: critters[x].hit_points)
                 if len(adj_enemies) > 0:
                     # print("Critter {} will attack".format(critter))
@@ -172,57 +179,84 @@ class Game:
 
                 # Case 2:
                 else:
-                    # To do this, keep track of visited tiles. Start with the current critter's tile as a path of
-                    # length 0 and then expand outward. Stop expanding a path when it is adjacent to a critter of the
-                    # opposite race type.
-                    covered_tiles = {(critter.x, critter.y)}
-                    possible_paths = [[(critter.x, critter.y)]]
+                    # BFS.
+                    moves = [(critter.x + dx, critter.y + dy) for dx, dy in Game.delta]
+                    moves = [m for m in moves if can_be_occupied(m)]
 
-                    # Extend the paths, if possible.
-                    while len(possible_paths) > 0:
-                        new_possible_paths = []
-                        for path in possible_paths:
-                            for delta in [(0, -1), (-1, 0), (0, 1), (1, 0)]:
-                                # Form the new point with which to extend the path.
-                                newx, newy = path[-1][0] + delta[0], path[-1][1] + delta[1]
+                    # Maintain a list of the best moves.
+                    best_moves = []
 
-                                # We cannot move to it if:
-                                # 1. It has been marked as used; or
-                                # 2. It cannot be occupied (i.e. it is out of bounds or not floor); or
-                                # 3. An ally occupies it.
-                                if (newx, newy) in covered_tiles or (not can_be_occupied(newx, newy)) or \
-                                        ((newx, newy) in critters and critters[(newx, newy)].race == critter.race):
-                                    covered_tiles.add((newx, newy))
+                    # Now iterate over the moves, as this is how we would start off in reading order from our location.
+                    for move in moves:
+                        mx, my = move
+
+                        # If this puts us adjacent to an enemy, then stop.
+                        if len(adjacent_enemies(move, critter.race)) > 0:
+                            best_moves.append((move, 1, move))
+
+                        # Maintain a dictionary of the shortest way we've found to get to a tile.
+                        covered_tiles = {m: 1 for m in moves}
+                        covered_tiles[(critter.x, critter.y)] = 0
+
+                        # Maintain a stack of the most distant tiles to process for the BFS.
+                        stack = [(mx + dx, my + dy) for (dx, dy) in Game.delta]
+                        stack = [s for s in stack if s not in covered_tiles and can_be_occupied(s)]
+
+                        distance = 1
+                        cont = True
+                        while cont:
+                            distance += 1
+                            new_stack = []
+
+                            # Look for new tiles to add.
+                            for tile in stack:
+                                if tile in covered_tiles:
+                                    continue
+                                covered_tiles[tile] = distance
+
+                                tx, ty = tile
+                                # If there is an enemy adjacent to the tile, it's the best we can do.
+                                if len(adjacent_enemies(tile, critter.race)):
+                                    best_moves.append((move, distance, tile))
+                                    cont = False
                                     continue
 
-                                # Otherwise, extend the path.
-                                covered_tiles.add((newx, newy))
-                                new_possible_paths.append(path + [(newx, newy)])
+                                # Add the newly reachable tiles.
+                                new_tiles = [(tx + dx, ty + dy) for (dx, dy) in Game.delta]
+                                new_stack += [t for t in new_tiles if t not in covered_tiles and can_be_occupied(t)]
 
-                        possible_paths = sorted(new_possible_paths)
+                            stack = list(set(new_stack))
+                            if not stack:
+                                cont = False
 
-                        # Do any of our possible paths take us to an enemy?
-                        enemy_paths = [p for p in possible_paths
-                                       if len(adjacent_enemies(p[-1][0], p[-1][1], critter.race)) > 0]
+                    # Filter out the moves that we can use.
+                    best_move = None
+                    if best_moves:
+                        # First condition: distance.
+                        min_dist = min(b[1] for b in best_moves)
+                        best_moves = [b for b in best_moves if b[1] == min_dist]
 
-                        # If so, pick the reading order path and move one square.
-                        if len(enemy_paths) > 0:
-                            enemy_path = enemy_paths[0]
-                            # print("{} moves on path: {}".format(critter, enemy_path))
-                            newx, newy = enemy_path[1]
-                            oldx, oldy = critter.x, critter.y
-                            del critters[(oldx, oldy)]
-                            critters[(newx, newy)] = critter
-                            critter.x = newx
-                            critter.y = newy
+                        # Second condition: for distance ties, choose first destination tile in reading order.
+                        best_moves.sort(key=lambda x: x[2])
+                        best_moves = [b for b in best_moves if b[2] == best_moves[0][2]]
 
-                            # If we are now in range of an enemy, attack the weakest.
-                            adj_enemies = sorted(adjacent_enemies(critter.x, critter.y, critter.race),
-                                                 key=lambda x: critters[x].hit_points)
-                            if len(adj_enemies) > 0:
-                                # print("Critter {} will attack".format(critter))
-                                enemy_to_attack = critters[adj_enemies[0]]
-                            break
+                        # Third condition: for ties on both, take the first step in reading order.
+                        best_moves.sort(key=lambda x: x[0])
+                        best_moves = [b for b in best_moves if b[0] == best_moves[0][0]]
+
+                        best_move = best_moves[0][0]
+
+                        # Move.
+                        critters[best_move] = critter
+                        del critters[(critter.x, critter.y)]
+                        critter.x, critter.y = best_move
+
+                        # If we are not adjacent to an enemy, attack the weakest one.
+                        adj_enemies = sorted(adjacent_enemies((critter.x, critter.y), critter.race),
+                                             key=lambda x: critters[x].hit_points)
+                        if len(adj_enemies) > 0:
+                            # print("Critter {} will attack".format(critter))
+                            enemy_to_attack = critters[adj_enemies[0]]
 
                 if enemy_to_attack is not None:
                     # print("{} is attacking {}".format(critter, enemy_to_attack))
@@ -248,14 +282,14 @@ class Game:
         # print("{} * {}".format(num_rounds, sum([c.hit_points for c in critters.values()])))
         return num_rounds * sum([c.hit_points for c in critters.values()]), num_elves
 
-    def determine_elf_strength(self):
+    def determine_elf_strength(self, debug=False):
         """
         Run simulations with ever-increasing strengths for elves until we finally achieve a point where all of the
         elves survive, and beat the goblins.
         :return: Return the score representing this scenario.
 
-        >>> Game(open('day_15_2.dat').read()).determine_elf_strength()
-        4988
+        # >>> Game(open('day_15_2.dat').read()).determine_elf_strength()
+        # 4988
         >>> Game(open('day_15_4.dat').read()).determine_elf_strength()
         31284
         >>> Game(open('day_15_5.dat').read()).determine_elf_strength()
@@ -279,7 +313,7 @@ class Game:
             for e in elves:
                 e.attack_power = attack_power
 
-            score, pop = self.play(critters)
+            score, pop = self.play(critters, debug)
             # print("str={}, survivors={}/{}".format(attack_power, pop, len(elves)))
             if pop == len(elves):
                 return score
@@ -290,11 +324,12 @@ if __name__ == '__main__':
     session = aocd.get_cookie()
     data = aocd.get_data(session=session, year=2018, day=day)
 
-    Game(open('day_15_9.dat').read()).play(debug=True)
+    # 190012
     #a1 = Game(data).play()[0]
     #print('a1 = %r' % a1)
     #aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
-    #a2 = Game(data).determine_elf_strength()
-    #print('a2 = %r' % a2)
+    # 34364
+    a2 = Game(data).determine_elf_strength(debug=True)
+    print('a2 = %r' % a2)
     #aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
