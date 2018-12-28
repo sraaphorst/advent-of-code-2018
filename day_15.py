@@ -77,29 +77,30 @@ class Game:
             print(c)
         sys.stdout.write('\n\n')
 
-    def play(self):
+    def play(self, critters=None):
         """
         Simulate the game, making a copy of the objects so at the leave the base confirguration immutable.
-        :return: the sum of the hit points of the survivors multiplied by the number of rounds
+        :return: the sum of the hit points of the survivors multiplied by the number of rounds, and the number
+                 of elves that survived, if any
 
-        >>> Game(open('day_15_1.dat').read()).play()
+        >>> Game(open('day_15_1.dat').read()).play()[0]
         27828
-        >>> Game(open('day_15_2.dat').read()).play()
+        >>> Game(open('day_15_2.dat').read()).play()[0]
         27730
-        >>> Game(open('day_15_3.dat').read()).play()
+        >>> Game(open('day_15_3.dat').read()).play()[0]
         36334
-        >>> Game(open('day_15_4.dat').read()).play()
+        >>> Game(open('day_15_4.dat').read()).play()[0]
         39514
-        >>> Game(open('day_15_5.dat').read()).play()
+        >>> Game(open('day_15_5.dat').read()).play()[0]
         27755
-        >>> Game(open('day_15_6.dat').read()).play()
+        >>> Game(open('day_15_6.dat').read()).play()[0]
         28944
-        >>> Game(open('day_15_7.dat').read()).play()
+        >>> Game(open('day_15_7.dat').read()).play()[0]
         18740
         """
         # Make copies of the data that should be mutable so that we can manipulate it.
         # This comprises the critter dictionary.
-        critters = deepcopy(self._critters)
+        critters = deepcopy(self._critters) if critters is None else deepcopy(critters)
 
         def can_be_occupied(x, y):
             """
@@ -230,7 +231,44 @@ class Game:
         # self.print_board(critters)
         # At this point, sum up the remaining HP of all critters (since one race will be dead), and multiply by the
         # number of rounds.
-        return num_rounds * sum([c.hit_points for c in critters.values()])
+        # print("*** AFTER ROUND {} ***".format(num_rounds))
+        # self.print_board(critters)
+        num_elves = len([c for c in critters.values() if c.race == Race.ELF])
+        # print("{} * {}".format(num_rounds, sum([c.hit_points for c in critters.values()])))
+        return num_rounds * sum([c.hit_points for c in critters.values()]), num_elves
+
+    def determine_elf_strength(self):
+        """
+        Run simulations with ever-increasing strengths for elves until we finally achieve a point where all of the
+        elves survive, and beat the goblins.
+        :return: Return the score representing this scenario.
+
+        >>> Game(open('day_15_2.dat').read()).determine_elf_strength()
+        4988
+        >>> Game(open('day_15_4.dat').read()).determine_elf_strength()
+        31284
+        >>> Game(open('day_15_5.dat').read()).determine_elf_strength()
+        3478
+        >>> Game(open('day_15_6.dat').read()).determine_elf_strength()
+        6474
+        >>> Game(open('day_15_7.dat').read()).determine_elf_strength()
+        1140
+        """
+        attack_power = 4
+
+        critters = deepcopy(self._critters)
+        elves = [c for c in critters.values() if c.race == Race.ELF]
+
+        while True:
+            for e in elves:
+                e.attack_power = attack_power
+
+            score, pop = self.play(critters)
+            # print("str={}, survivors={}/{}".format(attack_power, pop, len(elves)))
+            if pop == len(elves):
+                return score
+
+            attack_power += 1
 
 
 if __name__ == '__main__':
@@ -239,10 +277,10 @@ if __name__ == '__main__':
     data = aocd.get_data(session=session, year=2018, day=day)
 
     #Game(open('day_15_2.dat').read()).play()
-    a1 = Game(data).play()
+    a1 = Game(data).play()[0]
     print('a1 = %r' % a1)
     #aocd.submit1(a1, year=2018, day=day, session=session, reopen=False)
 
-    a2 = None
+    a2 = Game(data).determine_elf_strength()
     print('a2 = %r' % a2)
     #aocd.submit2(a2, year=2018, day=day, session=session, reopen=False)
